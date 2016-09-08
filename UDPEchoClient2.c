@@ -20,16 +20,17 @@
 
 
 void clientCNTCCode();
+
 void CatchAlarm(int ignored);
-int numberOfTimeOuts=0;
+
+int numberOfTimeOuts = 0;
 int numberOfTrials;
 long totalPing;
 int bStop;
 
-char Version[] = "1.1";   
+char Version[] = "1.1";
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int sock;                        /* Socket descriptor */
     struct sockaddr_in echoServAddr; /* Echo server address */
     struct sockaddr_in fromAddr;     /* Source address of echo */
@@ -37,11 +38,11 @@ int main(int argc, char *argv[])
     unsigned int fromSize;           /* In-out of address size for recvfrom() */
     char *servIP;                    /* IP address of server */
     char *echoString;                /* String to send to echo server */
-    char echoBuffer[ECHOMAX+1];      /* Buffer for receiving echoed string */
+    char echoBuffer[ECHOMAX + 1];      /* Buffer for receiving echoed string */
     int echoStringLen;               /* Length of string to echo */
     int respStringLen;               /* Length of received response */
-    struct hostent *thehost;	     /* Hostent from gethostbyname() */
-    double delay;		             /* Iteration delay in seconds */
+    struct hostent *thehost;         /* Hostent from gethostbyname() */
+    double delay;                     /* Iteration delay in seconds */
     int packetSize;                  /* PacketSize*/
     struct timeval *theTime1;
     struct timeval *theTime2;
@@ -74,12 +75,12 @@ int main(int argc, char *argv[])
     //Initialize values
     numberOfTimeOuts = 0;
     numberOfTrials = 0;
-    totalPing =0;
+    totalPing = 0;
     bStop = 0;
 
     /* get info from parameters , or default to defaults if they're not specified */
     if (argc > 10 || argc < 3) {
-        fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Average Rate>] [<Bucket Size>] [<Token Size>] "
+        fprintf(stderr, "Usage: %s <Server IP> [<Server Port>] [<Average Rate>] [<Bucket Size>] [<Token Size>] "
                 "[<Message Size>] [<Mode>] [<Number of Iterations>] [<Debug Flag>]\n", argv[0]);
         exit(1);
     }
@@ -97,119 +98,120 @@ int main(int argc, char *argv[])
 
     myaction.sa_handler = CatchAlarm;
     if (sigfillset(&myaction.sa_mask) < 0)
-       DieWithError("sigfillset() failed");
+        DieWithError("sigfillset() failed");
 
     myaction.sa_flags = 0;
 
     if (sigaction(SIGALRM, &myaction, 0) < 0)
-       DieWithError("sigaction failed for sigalarm");
+        DieWithError("sigaction failed for sigalarm");
 
     /* Set up the echo string */
 
     echoStringLen = packetSize;
     echoString = (char *) echoBuffer;
 
-    for (i=0; i<packetSize; i++) {
-       echoString[i] = 0;
+    for (i = 0; i < packetSize; i++) {
+        echoString[i] = 0;
     }
 
-    seqNumberPtr = (int *)echoString;
-    echoString[packetSize-1]='\0';
+    seqNumberPtr = (int *) echoString;
+    echoString[packetSize - 1] = '\0';
 
 
     /* Construct the server address structure */
     memset(&echoServAddr, 0, sizeof(echoServAddr));    /* Zero out structure */
     echoServAddr.sin_family = AF_INET;                 /* Internet addr family */
     echoServAddr.sin_addr.s_addr = inet_addr(serverIP);  /* Server IP address */
-    
+
     /* If user gave a dotted decimal address, we need to resolve it  */
     if (echoServAddr.sin_addr.s_addr == -1) {
         thehost = gethostbyname(serverIP);
-	    echoServAddr.sin_addr.s_addr = *((unsigned long *) thehost->h_addr_list[0]);
+        echoServAddr.sin_addr.s_addr = *((unsigned long *) thehost->h_addr_list[0]);
     }
-    
-    echoServAddr.sin_port   = htons(serverPort);     /* Server port */
+
+    echoServAddr.sin_port = htons(serverPort);     /* Server port */
 
 
     /* Create a datagram/UDP socket – Use same socket for every iteration */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
         DieWithError("socket() failed");
-  do {
+    do {
 
-    *seqNumberPtr = htonl(seqNumber++);
+        *seqNumberPtr = htonl(seqNumber++);
 
-    /* Send the string to the server */
-    //printf("UDPEchoClient: Send the string: %s to the server: %s \n", echoString,servIP);
-    gettimeofday(theTime1, NULL);
+        /* Send the string to the server */
+        //printf("UDPEchoClient: Send the string: %s to the server: %s \n", echoString,servIP);
+        gettimeofday(theTime1, NULL);
 
-    if (sendto(sock, echoString, echoStringLen, 0, (struct sockaddr *)
-               &echoServAddr, sizeof(echoServAddr)) != echoStringLen)
-      DieWithError("sendto() sent a different number of bytes than expected");
-  
-    /* Recv a response */
+        if (sendto(sock, echoString, echoStringLen, 0, (struct sockaddr *)
+                &echoServAddr, sizeof(echoServAddr)) != echoStringLen)
+            DieWithError("sendto() sent a different number of bytes than expected");
 
-    fromSize = sizeof(fromAddr);
-    alarm(2);            //set the timeout for 2 seconds
+        /* Recv a response */
 
-    if ((respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0,
-         (struct sockaddr *) &fromAddr, &fromSize)) != echoStringLen) {
-        if (errno == EINTR) 
-        { 
-           printf("Received a  Timeout !!!!!\n"); 
-           numberOfTimeOuts++; 
-           continue; 
+        fromSize = sizeof(fromAddr);
+        alarm(2);            //set the timeout for 2 seconds
+
+        if ((respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0,
+                                      (struct sockaddr *) &fromAddr, &fromSize)) != echoStringLen) {
+            if (errno == EINTR) {
+                printf("Received a  Timeout !!!!!\n");
+                numberOfTimeOuts++;
+                continue;
+            }
         }
-    }
 
-    RxSeqNumber = ntohl(*(int *)echoBuffer);
+        RxSeqNumber = ntohl(*(int *) echoBuffer);
 
-    alarm(0);            //clear the timeout 
-    gettimeofday(theTime2, NULL);
+        alarm(0);            //clear the timeout
+        gettimeofday(theTime2, NULL);
 
-    usec2 = (theTime2->tv_sec) * 1000000 + (theTime2->tv_usec);
-    usec1 = (theTime1->tv_sec) * 1000000 + (theTime1->tv_usec);
+        usec2 = (theTime2->tv_sec) * 1000000 + (theTime2->tv_usec);
+        usec1 = (theTime1->tv_sec) * 1000000 + (theTime1->tv_usec);
 
-    curPing = (usec2 - usec1);
-    printf("Ping(%d): %ld microseconds\n",RxSeqNumber,curPing);
+        curPing = (usec2 - usec1);
+        printf("Ping(%d): %ld microseconds\n", RxSeqNumber, curPing);
 
-    totalPing += curPing;
-    numberOfTrials++;
+        totalPing += curPing;
+        numberOfTrials++;
+
+        reqDelay.tv_sec = delay;
+        remDelay.tv_nsec = 0;
+        nanosleep((const struct timespec *) &reqDelay, &remDelay);
+        numberIterations--;
+    } while (numberIterations != 0 && bStop != 1);
+
+    /* Close the UDP socket after all of the iterations have run */
     close(sock);
 
-    reqDelay.tv_sec = delay;
-    remDelay.tv_nsec = 0;
-    nanosleep((const struct timespec*)&reqDelay, &remDelay);
-    numberIterations--;
-  } while (numberIterations != 0 && bStop != 1);
-  
-  if (numberOfTrials != 0) 
-    avgPing = (totalPing/numberOfTrials);
-  else 
-    avgPing = 0;
-  if (numberOfTimeOuts != 0) 
-    loss = ((numberOfTimeOuts*100)/numberOfTrials);
-  else 
-    loss = 0;
+    if (numberOfTrials != 0)
+        avgPing = (totalPing / numberOfTrials);
+    else
+        avgPing = 0;
+    if (numberOfTimeOuts != 0)
+        loss = ((numberOfTimeOuts * 100) / numberOfTrials);
+    else
+        loss = 0;
 
-  printf("\nAvg Ping: %ld microseconds Loss: %ld Percent\n", avgPing, loss);
-  
-  exit(0);
+    printf("\nAvg Ping: %ld microseconds Loss: %ld Percent\n", avgPing, loss);
+
+    exit(0);
 }
 
 void CatchAlarm(int ignored) { }
 
 void clientCNTCCode() {
-  long avgPing, loss;
+    long avgPing, loss;
 
-  bStop = 1;
-  if (numberOfTrials != 0) 
-    avgPing = (totalPing/numberOfTrials);
-  else 
-    avgPing = 0;
-  if (numberOfTimeOuts != 0) 
-    loss = ((numberOfTimeOuts*100)/numberOfTrials);
-  else 
-    loss = 0;
+    bStop = 1;
+    if (numberOfTrials != 0)
+        avgPing = (totalPing / numberOfTrials);
+    else
+        avgPing = 0;
+    if (numberOfTimeOuts != 0)
+        loss = ((numberOfTimeOuts * 100) / numberOfTrials);
+    else
+        loss = 0;
 
-  printf("\nAvg Ping: %ld microseconds Loss: %ld Percent\n", avgPing, loss);
+    printf("\nAvg Ping: %ld microseconds Loss: %ld Percent\n", avgPing, loss);
 }
