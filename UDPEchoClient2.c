@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     if (argc >= 9) numberIterations = (unsigned int) atoi(argv[8]);
     if (argc == 10) debugFlag = atoi(argv[9]);
 
-    if (messageSize < 16) messageSize = 16;
+    if (messageSize < 16) messageSize = 17;
 
     myaction.sa_handler = CatchAlarm;
     if (sigfillset(&myaction.sa_mask) < 0)
@@ -115,10 +115,8 @@ int main(int argc, char *argv[]) {
     echoStringLen = messageSize;
     echoString = (char *) echoBuffer;
 
-    if (debugFlag) printf("Building packet header:\n");
-
     for (i = 0; i < messageSize; i++) {
-        echoString[i] = 'a';
+        echoString[i] = 0;
     }
 
     messageSizePtr = (short *) echoString;
