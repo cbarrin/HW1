@@ -107,15 +107,15 @@ int main(int argc, char *argv[]) {
 
     /* Set up the echo string */
 
-    echoStringLen = packetSize;
+    echoStringLen = messageSize;
     echoString = (char *) echoBuffer;
 
-    for (i = 0; i < packetSize; i++) {
+    for (i = 0; i < messageSize; i++) {
         echoString[i] = 0;
     }
 
     seqNumberPtr = (int *) echoString;
-    echoString[packetSize - 1] = '\0';
+    echoString[messageSize - 1] = '\0';
 
 
     /* Construct the server address structure */
@@ -131,6 +131,13 @@ int main(int argc, char *argv[]) {
 
     echoServAddr.sin_port = htons(serverPort);     /* Server port */
 
+    /* DEBUG PRINTS ------------------------- */
+    int len=20;
+    char buffer[len];
+    inet_ntop(AF_INET, &(echoServAddr.sin_addr), buffer, len);
+    if (debugFlag != 0) printf("serverIP:%s\n",buffer);
+    if (debugFlag != 0) printf("serverPort:%d\n", ntohs(echoServAddr.sin_port));
+    /* -------------------------------------- */
 
     /* Create a datagram/UDP socket – Use same socket for every iteration */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
