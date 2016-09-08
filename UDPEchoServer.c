@@ -12,11 +12,21 @@
 *
 *********************************************************/
 #include "UDPEcho.h"
+#define MAX_CLIENT 100
 
 void DieWithError(char *errorMessage);  /* External error handling function */
 
 
 char Version[] = "1.1";   
+struct client {                      /* Struct for storing client information */
+    unsigned long ip_addr;
+    unsigned short port;
+    time_t start_time;
+    time_t last_time;
+    unsigned long recv_bytes;
+    unsigned long avg_thrput;
+    unsigned short avg_loss;
+};
 
 int main(int argc, char *argv[])
 {
@@ -29,6 +39,11 @@ int main(int argc, char *argv[])
     int recvMsgSize;                 /* Size of received message */
     double avgLossRate = 0.0;        /* Average Artificial Loss Rate */
     int debugFlag = 0;               /* Flag for debug level */
+    int totalMsg = 0;                /* Total messages received by server */
+    int totalSessions = 0;           /* Total number of client sessions */
+    struct client clients[MAX_CLIENT]; 
+    int current_session = 0;
+    int matched = 0;                 
 
     if (argc < 2)         /* Test for correct number of parameters */
     {
@@ -82,11 +97,44 @@ if (debugFlag > 0) {
         {
 //$A0
 //            DieWithError("recvfrom() failed");
+if (debugFlag > 0) {
           printf("Failure on recvfrom, client: %s, errno:%d\n", inet_ntoa(echoClntAddr.sin_addr),errno);
+}
         }
     
 
-//        printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+if (debugFlag > 0) {
+        printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+}
+
+        matched = 0;
+        int i;
+        for(i=0;i<totalSessions;i++) {
+            if(clients[i].ip_addr == atoi(inet_ntoa(echoClntAddr.sin_addr))) {
+                 if(clients[i].port == echoClntAddr.sin_port) {
+                     current_session = i;
+                     matched = 1;
+                     clients[current_session].last_time = time(NULL);
+                     break; 
+                 }
+            }
+        }
+        if(!matched) {
+            current_session = totalSessions;
+            totalSessions++;
+            clients[current_session].ip_addr = atoi(inet_ntoa(echoClntAddr.sin_addr));
+            clients[current_session].port = echoClntAddr.sin_port;
+            clients[current_session].start_time = time(NULL);
+            clients[current_session].last_time = clients[current_session].start_time; 
+            clients[current_session].recv_bytes = 0;
+            clients[current_session].avg_thrput = 0;
+            clients[current_session].avg_loss = 0;
+        }
+
+        clients[current_session].recv_bytes += recvMsgSize; 
+        totalMsg += recvMsgSize;
+
+        
 
         /* Send received datagram back to the client */
         if (sendto(sock, echoBuffer, recvMsgSize, 0,  

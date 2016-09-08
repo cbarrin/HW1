@@ -20,6 +20,7 @@
 #include <arpa/inet.h>  /* for sockaddr_in and inet_addr() */
 #include <stdlib.h>     /* for atoi() and exit() */
 #include <unistd.h>     /* for close() */
+#include <time.h>       /* for time_t */
 
 
 #define ECHOMAX 10000     /* Longest string to echo */
