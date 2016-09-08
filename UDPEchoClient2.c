@@ -120,24 +120,23 @@ int main(int argc, char *argv[])
     /* Construct the server address structure */
     memset(&echoServAddr, 0, sizeof(echoServAddr));    /* Zero out structure */
     echoServAddr.sin_family = AF_INET;                 /* Internet addr family */
-    echoServAddr.sin_addr.s_addr = inet_addr(servIP);  /* Server IP address */
+    echoServAddr.sin_addr.s_addr = inet_addr(serverIP);  /* Server IP address */
     
     /* If user gave a dotted decimal address, we need to resolve it  */
     if (echoServAddr.sin_addr.s_addr == -1) {
-        thehost = gethostbyname(servIP);
+        thehost = gethostbyname(serverIP);
 	    echoServAddr.sin_addr.s_addr = *((unsigned long *) thehost->h_addr_list[0]);
     }
     
-    echoServAddr.sin_port   = htons(echoServPort);     /* Server port */
+    echoServAddr.sin_port   = htons(serverPort);     /* Server port */
 
-  while (nIterations > 0 && bStop != 1) {
 
-    *seqNumberPtr = htonl(seqNumber++); 
-
-    /* Create a datagram/UDP socket */
+    /* Create a datagram/UDP socket – Use same socket for every iteration */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
         DieWithError("socket() failed");
+  do {
 
+    *seqNumberPtr = htonl(seqNumber++);
 
     /* Send the string to the server */
     //printf("UDPEchoClient: Send the string: %s to the server: %s \n", echoString,servIP);
@@ -180,8 +179,8 @@ int main(int argc, char *argv[])
     reqDelay.tv_sec = delay;
     remDelay.tv_nsec = 0;
     nanosleep((const struct timespec*)&reqDelay, &remDelay);
-    nIterations--;
-  }
+    numberIterations--;
+  } while (numberIterations != 0 && bStop != 1);
   
   if (numberOfTrials != 0) 
     avgPing = (totalPing/numberOfTrials);
