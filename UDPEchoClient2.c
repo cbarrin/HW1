@@ -67,7 +67,8 @@ int main(int argc, char *argv[])
 
     if (argc != 6)    /* Test for correct number of arguments */
     {
-        fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Iteration Delay In Seconds>] [<PacketSize>] [<No. of Iterations>]\n", argv[0]);
+        fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Average Rate>] [<Bucket Size>] [<Token Size>] "
+                "[<Message Size>] [<Mode>] [<Number of Iterations>] [<Debug Flag>]\n", argv[0]);
         exit(1);
     }
 
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
         packetSize = ECHOMAX;
       nIterations = atoi(argv[5]);
     }
-       
+
     myaction.sa_handler = CatchAlarm;
     if (sigfillset(&myaction.sa_mask) < 0)
        DieWithError("sigfillset() failed");
