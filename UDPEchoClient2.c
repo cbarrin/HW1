@@ -65,51 +65,48 @@ int main(int argc, char *argv[])
     totalPing =0;
     bStop = 0;
 
-    if (argc != 6)    /* Test for correct number of arguments */
-    {
-        fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Average Rate>] [<Bucket Size>] [<Token Size>] "
-                "[<Message Size>] [<Mode>] [<Number of Iterations>] [<Debug Flag>]\n", argv[0]);
-        exit(1);
-    }
-
-    signal (SIGINT, clientCNTCCode);
-
     servIP = argv[1];           /* First arg: server IP address (dotted quad) */
-
     /* get info from parameters , or default to defaults if they're not specified */
-    if (argc == 2) {
-       echoServPort = 7;
-       delay = 1.0;
-       packetSize = 32;
-	   nIterations = 1;
-    }
-    else if (argc == 3) {
-       echoServPort = atoi(argv[2]);
-       delay = 1.0;
-       packetSize = 32;
-	   nIterations = 1;
-    }
-    else if (argc == 4) {
-       echoServPort = atoi(argv[2]);
-       delay = atof(argv[3]);
-       packetSize = 32;
-       nIterations = 1;
-    }
-    else if (argc == 5) {
-       echoServPort = atoi(argv[2]);
-       delay = atof(argv[3]);
-       packetSize = atoi(argv[4]);
-       if (packetSize > ECHOMAX)
-         packetSize = ECHOMAX;
-       nIterations = 1;
-    }
-    else if (argc == 6) {
-      echoServPort = atoi(argv[2]);
-      delay = atof(argv[3]);
-      packetSize = atoi(argv[4]);
-      if (packetSize > ECHOMAX)
-        packetSize = ECHOMAX;
-      nIterations = atoi(argv[5]);
+    switch (argc) {
+        case 2:
+            echoServPort = 7;
+            delay = 1.0;
+            packetSize = 32;
+            nIterations = 1;
+            break;
+        case 3:
+            echoServPort = atoi(argv[2]);
+            delay = 1.0;
+            packetSize = 32;
+            nIterations = 1;
+            break;
+        case 4:
+            echoServPort = atoi(argv[2]);
+            delay = atof(argv[3]);
+            packetSize = 32;
+            nIterations = 1;
+            break;
+        case 5:
+            echoServPort = atoi(argv[2]);
+            delay = atof(argv[3]);
+            packetSize = atoi(argv[4]);
+            if (packetSize > ECHOMAX)
+                packetSize = ECHOMAX;
+            nIterations = 1;
+            break;
+        case 6:
+            echoServPort = atoi(argv[2]);
+            delay = atof(argv[3]);
+            packetSize = atoi(argv[4]);
+            if (packetSize > ECHOMAX)
+                packetSize = ECHOMAX;
+            nIterations = atoi(argv[5]);
+            break;
+        default:
+            fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Average Rate>] [<Bucket Size>] [<Token Size>] "
+                    "[<Message Size>] [<Mode>] [<Number of Iterations>] [<Debug Flag>]\n", argv[0]);
+            exit(1);
+
     }
 
     myaction.sa_handler = CatchAlarm;
