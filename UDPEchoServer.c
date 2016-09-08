@@ -43,14 +43,18 @@ int main(int argc, char *argv[])
     } 
 
     echoServPort = atoi(argv[1]);  /* First arg:  local port */
-
-//$A0
+//    printf("Values: PORT :%d\tLoss: %f\tLevel: %d\n",echoServPort,avgLossRate,debugFlag);
+//#if debugFlag > 0
+if (debugFlag > 0) {
     printf("UDPEchoServer(version:%s): Port:%d\n",(char *)Version,echoServPort);    
-
+}
+//#endif
     /* Create socket for sending/receiving datagrams */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0){
 //        DieWithError("socket() failed");
+if (debugFlag > 0) {
       printf("Failure on socket call , errno:%d\n",errno);
+}
     }
 
     /* Construct local address structure */
@@ -62,7 +66,9 @@ int main(int argc, char *argv[])
     /* Bind to the local address */
     if (bind(sock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0) {
 //        DieWithError("bind() failed");
+if (debugFlag > 0) {
           printf("Failure on bind, errno:%d\n",errno);
+}
     }
   
     for (;;) /* Run forever */
