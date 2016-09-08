@@ -56,6 +56,18 @@ int main(int argc, char *argv[])
     int nIterations;
     long avgPing, loss;
 
+    /* Command line parameters and defaults */
+    char *serverIP; /* Server's IP address */
+    unsigned short serverPort;  /* Server's port number */
+    unsigned int averageRate = 1000000; /* Avg application sending rate in bits per second */
+    unsigned int tokenSize = 4 * 1472;  /* size in bytes of the token bucket */
+    unsigned int bucketSize = 1 * tokenSize;    /* Number of tokens available in bytes */
+    unsigned int messageSize = 1472;    /* Amount of data to be put into each UDP datagram in bytes */
+    int mode = 0;   /* one-way = 1 and RTT = 0 */
+    unsigned int numberIterations = 0;  /* Number of times the client sends. 0 implies forever */
+    int debugFlag = 0;  /* 0 means no printf messages sent to stdout besides what is required */
+    /* ------------------------------------ */
+
     theTime1 = &TV1;
     theTime2 = &TV2;
 
@@ -65,52 +77,24 @@ int main(int argc, char *argv[])
     totalPing =0;
     bStop = 0;
 
-    if (argc != 6)    /* Test for correct number of arguments */
-    {
-        fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Iteration Delay In Seconds>] [<PacketSize>] [<No. of Iterations>]\n", argv[0]);
+    /* get info from parameters , or default to defaults if they're not specified */
+    if (argc > 10 || argc < 3) {
+        fprintf(stderr,"Usage: %s <Server IP> [<Server Port>] [<Average Rate>] [<Bucket Size>] [<Token Size>] "
+                "[<Message Size>] [<Mode>] [<Number of Iterations>] [<Debug Flag>]\n", argv[0]);
         exit(1);
     }
 
-    signal (SIGINT, clientCNTCCode);
-
     servIP = argv[1];           /* First arg: server IP address (dotted quad) */
+    serverPort = (unsigned short) atoi(argv[2]);       /* Second arg: server port */
 
-    /* get info from parameters , or default to defaults if they're not specified */
-    if (argc == 2) {
-       echoServPort = 7;
-       delay = 1.0;
-       packetSize = 32;
-	   nIterations = 1;
-    }
-    else if (argc == 3) {
-       echoServPort = atoi(argv[2]);
-       delay = 1.0;
-       packetSize = 32;
-	   nIterations = 1;
-    }
-    else if (argc == 4) {
-       echoServPort = atoi(argv[2]);
-       delay = atof(argv[3]);
-       packetSize = 32;
-       nIterations = 1;
-    }
-    else if (argc == 5) {
-       echoServPort = atoi(argv[2]);
-       delay = atof(argv[3]);
-       packetSize = atoi(argv[4]);
-       if (packetSize > ECHOMAX)
-         packetSize = ECHOMAX;
-       nIterations = 1;
-    }
-    else if (argc == 6) {
-      echoServPort = atoi(argv[2]);
-      delay = atof(argv[3]);
-      packetSize = atoi(argv[4]);
-      if (packetSize > ECHOMAX)
-        packetSize = ECHOMAX;
-      nIterations = atoi(argv[5]);
-    }
-       
+    if (argc >= 4) averageRate = (unsigned int) atoi(argv[3]);
+    if (argc >= 5) bucketSize = (unsigned int) atoi(argv[4]);
+    if (argc >= 6) tokenSize = (unsigned int) atoi(argv[5]);
+    if (argc >= 7) messageSize = (unsigned int) atoi(argv[6]);
+    if (argc >= 8) mode = atoi(argv[7]);
+    if (argc >= 9) numberIterations = (unsigned int) atoi(argv[8]);
+    if (argc == 10) debugFlag = atoi(argv[9]);
+
     myaction.sa_handler = CatchAlarm;
     if (sigfillset(&myaction.sa_mask) < 0)
        DieWithError("sigfillset() failed");
