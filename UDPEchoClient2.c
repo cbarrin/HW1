@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    servIP = argv[1];           /* First arg: server IP address (dotted quad) */
+    serverIP = argv[1];           /* First arg: server IP address (dotted quad) */
     serverPort = (unsigned short) atoi(argv[2]);       /* Second arg: server port */
 
     if (argc >= 4) averageRate = (unsigned int) atoi(argv[3]);
