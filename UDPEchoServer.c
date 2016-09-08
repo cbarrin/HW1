@@ -27,12 +27,20 @@ int main(int argc, char *argv[])
     char echoBuffer[ECHOMAX];        /* Buffer for echo string */
     unsigned short echoServPort;     /* Server port */
     int recvMsgSize;                 /* Size of received message */
+    double avgLossRate = 0.0;        /* Average Artificial Loss Rate */
+    int debugFlag = 0;               /* Flag for debug level */
 
-    if (argc != 2)         /* Test for correct number of parameters */
+    if (argc < 2)         /* Test for correct number of parameters */
     {
-        fprintf(stderr,"Usage:  %s <UDP SERVER PORT>\n", argv[0]);
+        fprintf(stderr,"Usage:  %s <UDP SERVER PORT> [<Average Loss Rate>] [<Debug Level>]\n", argv[0]);
         exit(1);
     }
+    if (argc == 3){
+        avgLossRate = atof(argv[2]);
+    } else if (argc == 4) {
+        avgLossRate = atof(argv[2]);
+        debugFlag = atoi(argv[3]);
+    } 
 
     echoServPort = atoi(argv[1]);  /* First arg:  local port */
 
