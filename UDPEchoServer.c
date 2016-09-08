@@ -19,7 +19,7 @@ void DieWithError(char *errorMessage);  /* External error handling function */
 
 char Version[] = "1.1";   
 struct client {                      /* Struct for storing client information */
-    unsigned long ip_addr;
+    char ip_addr[20];
     unsigned short port;
     time_t start_time;
     time_t last_time;
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 //    printf("Values: PORT :%d\tLoss: %f\tLevel: %d\n",echoServPort,avgLossRate,debugFlag);
 //#if debugFlag > 0
 if (debugFlag > 0) {
-    printf("UDPEchoServer(version:%s): Port:%d\n",(char *)Version,echoServPort);    
+    printf("UDPEchoServer(version:%s): Port:%d Loss:%f Debug:%d\n",(char *)Version,echoServPort,avgLossRate,debugFlag);    
 }
 //#endif
     /* Create socket for sending/receiving datagrams */
@@ -104,14 +104,14 @@ if (debugFlag > 0) {
     
 
 if (debugFlag > 0) {
-        printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+        printf("Handling client %s:%d\n", inet_ntoa(echoClntAddr.sin_addr),ntohs(echoClntAddr.sin_port));
 }
 
         matched = 0;
         int i;
         for(i=0;i<totalSessions;i++) {
-            if(clients[i].ip_addr == atoi(inet_ntoa(echoClntAddr.sin_addr))) {
-                 if(clients[i].port == echoClntAddr.sin_port) {
+            if(!strcmp(clients[i].ip_addr,inet_ntoa(echoClntAddr.sin_addr))) {
+                 if(clients[i].port == ntohs(echoClntAddr.sin_port)) {
                      current_session = i;
                      matched = 1;
                      clients[current_session].last_time = time(NULL);
@@ -122,8 +122,8 @@ if (debugFlag > 0) {
         if(!matched) {
             current_session = totalSessions;
             totalSessions++;
-            clients[current_session].ip_addr = atoi(inet_ntoa(echoClntAddr.sin_addr));
-            clients[current_session].port = echoClntAddr.sin_port;
+            strcpy(clients[current_session].ip_addr,inet_ntoa(echoClntAddr.sin_addr));
+            clients[current_session].port = ntohs(echoClntAddr.sin_port);
             clients[current_session].start_time = time(NULL);
             clients[current_session].last_time = clients[current_session].start_time; 
             clients[current_session].recv_bytes = 0;
@@ -134,7 +134,16 @@ if (debugFlag > 0) {
         clients[current_session].recv_bytes += recvMsgSize; 
         totalMsg += recvMsgSize;
 
-        
+        double r = rand()%100;
+if (debugFlag > 0) {
+        printf("Saved IP addres: %s\n", clients[current_session].ip_addr);
+        printf("bytes for this session: %d\n",clients[current_session].recv_bytes);
+        printf("Total bytes received by server: %d\n",totalMsg);
+        printf("random number generated for loss: %f\n",r);
+}
+        if (r < avgLossRate*100) {
+             continue;
+        }
 
         /* Send received datagram back to the client */
         if (sendto(sock, echoBuffer, recvMsgSize, 0,  
