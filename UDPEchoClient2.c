@@ -50,6 +50,9 @@ int main(int argc, char *argv[]) {
     int i;
     struct sigaction myaction;
     long usec1, usec2, curPing;
+    short *messageSizePtr;
+    short *sessionModePtr;
+    long int *timestampPtr;
     int *seqNumberPtr;
     unsigned int seqNumber = 1;
     unsigned int RxSeqNumber = 1;
@@ -63,7 +66,7 @@ int main(int argc, char *argv[]) {
     unsigned int averageRate = 1000000; /* Avg application sending rate in bits per second */
     unsigned int tokenSize = 4 * 1472;  /* size in bytes of the token bucket */
     unsigned int bucketSize = 1 * tokenSize;    /* Number of tokens available in bytes */
-    unsigned int messageSize = 1472;    /* Amount of data to be put into each UDP datagram in bytes */
+    unsigned short messageSize = 1472;    /* Amount of data to be put into each UDP datagram in bytes */
     int mode = 0;   /* one-way = 1 and RTT = 0 */
     unsigned int numberIterations = 0;  /* Number of times the client sends. 0 implies forever */
     int debugFlag = 0;  /* 0 means no printf messages sent to stdout besides what is required */
@@ -91,10 +94,12 @@ int main(int argc, char *argv[]) {
     if (argc >= 4) averageRate = (unsigned int) atoi(argv[3]);
     if (argc >= 5) bucketSize = (unsigned int) atoi(argv[4]);
     if (argc >= 6) tokenSize = (unsigned int) atoi(argv[5]);
-    if (argc >= 7) messageSize = (unsigned int) atoi(argv[6]);
+    if (argc >= 7) messageSize = (unsigned short) atoi(argv[6]);
     if (argc >= 8) mode = atoi(argv[7]);
     if (argc >= 9) numberIterations = (unsigned int) atoi(argv[8]);
     if (argc == 10) debugFlag = atoi(argv[9]);
+
+    if (messageSize < 16) messageSize = 16;
 
     myaction.sa_handler = CatchAlarm;
     if (sigfillset(&myaction.sa_mask) < 0)
@@ -110,11 +115,16 @@ int main(int argc, char *argv[]) {
     echoStringLen = messageSize;
     echoString = (char *) echoBuffer;
 
+    if (debugFlag) printf("Building packet header:\n");
+
     for (i = 0; i < messageSize; i++) {
-        echoString[i] = 0;
+        echoString[i] = 'a';
     }
 
-    seqNumberPtr = (int *) echoString;
+    messageSizePtr = (short *) echoString;
+    sessionModePtr = (short *) echoString + 1;
+    timestampPtr = (short *) echoString + 3;
+    seqNumberPtr = (int *) echoString + 3;
     echoString[messageSize - 1] = '\0';
 
 
@@ -135,8 +145,8 @@ int main(int argc, char *argv[]) {
     int len=20;
     char buffer[len];
     inet_ntop(AF_INET, &(echoServAddr.sin_addr), buffer, len);
-    if (debugFlag != 0) printf("serverIP:%s\n",buffer);
-    if (debugFlag != 0) printf("serverPort:%d\n", ntohs(echoServAddr.sin_port));
+    if (debugFlag) printf("serverIP:%s\n",buffer);
+    if (debugFlag) printf("serverPort:%d\n", ntohs(echoServAddr.sin_port));
     /* -------------------------------------- */
 
     /* Create a datagram/UDP socket – Use same socket for every iteration */
@@ -144,10 +154,20 @@ int main(int argc, char *argv[]) {
         DieWithError("socket() failed");
     do {
 
+        *messageSizePtr = htons(messageSize);
+        *sessionModePtr = htons(mode);
+        *timestampPtr = (unsigned) time(NULL);
         *seqNumberPtr = htonl(seqNumber++);
 
         /* Send the string to the server */
-        //printf("UDPEchoClient: Send the string: %s to the server: %s \n", echoString,servIP);
+        int i;
+        for (i = 0; i < messageSize; i++)
+        {
+            if (i > 0) printf(":");
+            printf("%02X", echoString[i]);
+        }
+        printf("\n");
+        //printf("UDPEchoClient: Send the string: %X to the server: %s \n", echoString, serverIP);
         gettimeofday(theTime1, NULL);
 
         if (sendto(sock, echoString, echoStringLen, 0, (struct sockaddr *)
@@ -185,6 +205,7 @@ int main(int argc, char *argv[]) {
         reqDelay.tv_sec = delay;
         remDelay.tv_nsec = 0;
         nanosleep((const struct timespec *) &reqDelay, &remDelay);
+        if (debugFlag) printf("numberIterations:%d\n", numberIterations);
         numberIterations--;
     } while (numberIterations != 0 && bStop != 1);
 
