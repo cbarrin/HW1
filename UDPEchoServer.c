@@ -12,21 +12,24 @@
 *
 *********************************************************/
 #include "UDPEcho.h"
+#include <signal.h>
 #define MAX_CLIENT 100
 
 void DieWithError(char *errorMessage);  /* External error handling function */
-
+void serverCNT();
 
 char Version[] = "1.1";   
+int totalMsg = 0;                /* Total messages received by server */
+int totalSessions = 0;           /* Total number of client sessions */
 struct client {                      /* Struct for storing client information */
     char ip_addr[20];
     unsigned short port;
-    time_t start_time;
-    time_t last_time;
+    struct timespec start_time;
+    struct timespec last_time;
+    //time_t start_time;
+    //time_t last_time;
     unsigned long recv_bytes;
-    unsigned long avg_thrput;
-    unsigned short avg_loss;
-};
+} clients[MAX_CLIENT];
 
 int main(int argc, char *argv[])
 {
@@ -39,9 +42,6 @@ int main(int argc, char *argv[])
     int recvMsgSize;                 /* Size of received message */
     double avgLossRate = 0.0;        /* Average Artificial Loss Rate */
     int debugFlag = 0;               /* Flag for debug level */
-    int totalMsg = 0;                /* Total messages received by server */
-    int totalSessions = 0;           /* Total number of client sessions */
-    struct client clients[MAX_CLIENT]; 
     int current_session = 0;
     int matched = 0;                 
     short *messageSizePtr;
@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
     long int *timestampPtr;
     int *seqNumberPtr;
 
+    signal(SIGINT, serverCNT);
     if (argc < 2)         /* Test for correct number of parameters */
     {
         fprintf(stderr,"Usage:  %s <UDP SERVER PORT> [<Average Loss Rate>] [<Debug Level>]\n", argv[0]);
@@ -118,7 +119,8 @@ if (debugFlag > 0) {
                  if(clients[i].port == ntohs(echoClntAddr.sin_port)) {
                      current_session = i;
                      matched = 1;
-                     clients[current_session].last_time = time(NULL);
+                     //clients[current_session].last_time = time(NULL);
+                     clock_gettime(CLOCK_MONOTONIC, &clients[current_session].last_time);
                      break; 
                  }
             }
@@ -128,11 +130,13 @@ if (debugFlag > 0) {
             totalSessions++;
             strcpy(clients[current_session].ip_addr,inet_ntoa(echoClntAddr.sin_addr));
             clients[current_session].port = ntohs(echoClntAddr.sin_port);
-            clients[current_session].start_time = time(NULL);
-            clients[current_session].last_time = clients[current_session].start_time; 
+            //clients[current_session].start_time = time(NULL);
+            clock_gettime(CLOCK_MONOTONIC, &clients[current_session].start_time);
+            //clients[current_session].last_time = clients[current_session].start_time; 
+            clock_gettime(CLOCK_MONOTONIC, &clients[current_session].last_time);
             clients[current_session].recv_bytes = 0;
-            clients[current_session].avg_thrput = 0;
-            clients[current_session].avg_loss = 0;
+            //clients[current_session].avg_thrput = 0;
+            //clients[current_session].avg_loss = 0;
         }
 
         clients[current_session].recv_bytes += recvMsgSize; 
@@ -143,12 +147,11 @@ if (debugFlag > 0) {
         timestampPtr = (short *) echoBuffer + 3;
         seqNumberPtr = (int *) echoBuffer + 3;
 if (debugFlag > 0) {
-        printf("message size: %d\n",ntohl(*messageSizePtr));
         printf("session mode: %d\n",ntohl(*sessionModePtr));
-        printf("time stamp: %d\n",ntohl(*timestampPtr));
         printf("Seq #%d\n",ntohl(*seqNumberPtr));
         
 }
+        
         double r = rand()%100;
 if (debugFlag > 0) {
         printf("Saved IP addres: %s\n", clients[current_session].ip_addr);
@@ -171,4 +174,18 @@ if (debugFlag > 0) {
         }
     }
     /* NOT REACHED */
+}
+
+void serverCNT() {
+    int i;
+    float totalTime;
+    int avgthrput;
+    printf("%d %d\n",totalSessions,totalMsg);
+    for(i=0;i<totalSessions;i++) {
+        totalTime = ((double)clients[i].last_time.tv_sec + 1.0e-9*clients[i].last_time.tv_nsec) - ((double)clients[i].start_time.tv_sec + 1.0e-9*clients[i].start_time.tv_nsec); 
+        avgthrput = clients[i].recv_bytes/totalTime;
+        printf("%s %d %f %d %d\n",clients[i].ip_addr,clients[i].port,totalTime,clients[i].recv_bytes,avgthrput);
+    }
+    fflush(stdout);
+    exit(0);
 }
