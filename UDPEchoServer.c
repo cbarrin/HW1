@@ -44,6 +44,10 @@ int main(int argc, char *argv[])
     struct client clients[MAX_CLIENT]; 
     int current_session = 0;
     int matched = 0;                 
+    short *messageSizePtr;
+    short *sessionModePtr;
+    long int *timestampPtr;
+    int *seqNumberPtr;
 
     if (argc < 2)         /* Test for correct number of parameters */
     {
@@ -134,6 +138,13 @@ if (debugFlag > 0) {
         clients[current_session].recv_bytes += recvMsgSize; 
         totalMsg += recvMsgSize;
 
+        messageSizePtr = (short *) echoBuffer;
+        sessionModePtr = (short *) echoBuffer + 1;
+        timestampPtr = (short *) echoBuffer + 3;
+        seqNumberPtr = (int *) echoBuffer + 3;
+if (debugFlag > 0) {
+        printf("Seq #%u\n",ntohl(*seqNumberPtr));
+}
         double r = rand()%100;
 if (debugFlag > 0) {
         printf("Saved IP addres: %s\n", clients[current_session].ip_addr);
