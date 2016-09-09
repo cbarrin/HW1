@@ -17,11 +17,15 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <time.h>
+#include <unistd.h>
 
+#define INTERVAL 500        /* number of milliseconds to go off */
 
 void clientCNTCCode();
 
 void CatchAlarm(int ignored);
+
+void addTokens(int signum);
 
 int numberOfTimeOuts = 0;
 int numberOfTrials;
@@ -29,6 +33,8 @@ long totalPing;
 int bStop;
 
 char Version[] = "1.1";
+
+int tokenFlag = 0;
 
 int main(int argc, char *argv[]) {
     int sock;                        /* Socket descriptor */
@@ -101,14 +107,14 @@ int main(int argc, char *argv[]) {
 
     if (messageSize < 16) messageSize = 17;
 
-    myaction.sa_handler = CatchAlarm;
-    if (sigfillset(&myaction.sa_mask) < 0)
-        DieWithError("sigfillset() failed");
-
-    myaction.sa_flags = 0;
-
-    if (sigaction(SIGALRM, &myaction, 0) < 0)
-        DieWithError("sigaction failed for sigalarm");
+//    myaction.sa_handler = CatchAlarm;
+//    if (sigfillset(&myaction.sa_mask) < 0)
+//        DieWithError("sigfillset() failed");
+//
+//    myaction.sa_flags = 0;
+//
+//    if (sigaction(SIGALRM, &myaction, 0) < 0)
+//        DieWithError("sigaction failed for sigalarm");
 
     /* Set up the echo string */
 
@@ -147,10 +153,38 @@ int main(int argc, char *argv[]) {
     if (debugFlag) printf("serverPort:%d\n", ntohs(echoServAddr.sin_port));
     /* -------------------------------------- */
 
+    signal(SIGINT, (void (*)(int)) clientCNTCCode);
+
+    /* Set Itimer to increment tokenSize at desired rate */
+    struct sigaction sa;
+    struct itimerval timer;
+
+    /* Install timer_handler as the signal handler for SIGVTALRM. */
+    memset (&sa, 0, sizeof (sa));
+    sa.sa_handler = &addTokens;
+    sigaction (SIGVTALRM, &sa, NULL);
+
+    /* Configure the timer to expire after 250 msec... */
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 1000;
+    /* ... and every 250 msec after that. */
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 1000;
+    /* Start a virtual timer. It counts down whenever this process is
+      executing. */
+    setitimer (ITIMER_VIRTUAL, &timer, NULL);
+
     /* Create a datagram/UDP socket – Use same socket for every iteration */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
         DieWithError("socket() failed");
     do {
+        /* Increment tokens if necessary */
+        if (tokenFlag) {
+            tokenSize += averageRate / 1000;
+            if (debugFlag) printf("New token size is %d\n", tokenSize);
+            tokenFlag = 0;
+        }
+
         if ((tokenSize - messageSize) >= 0) {
             *messageSizePtr = htons(messageSize);
             *sessionModePtr = htons(mode);
@@ -159,12 +193,14 @@ int main(int argc, char *argv[]) {
             *seqNumberPtr = htonl(seqNumber++);
 
             /* Send the string to the server */
-            int i;
-            for (i = 0; i < messageSize; i++) {
-                if (i > 0) printf(":");
-                printf("%02X", (unsigned) (unsigned char) echoString[i]);
+            if (debugFlag) {
+                int i;
+                for (i = 0; i < messageSize; i++) {
+                    if (i > 0) printf(":");
+                    printf("%02X", (unsigned) (unsigned char) echoString[i]);
+                }
+                printf("\n");
             }
-            printf("\n");
             //printf("UDPEchoClient: Send the string: %X to the server: %s \n", echoString, serverIP);
             gettimeofday(theTime1, NULL);
 
@@ -201,7 +237,7 @@ int main(int argc, char *argv[]) {
 
             reqDelay.tv_sec = delay;
             remDelay.tv_nsec = 0;
-            nanosleep((const struct timespec *) &reqDelay, &remDelay);
+            //nanosleep((const struct timespec *) &reqDelay, &remDelay);
             if (debugFlag) printf("numberIterations:%d\n", numberIterations);
             numberIterations--;
 
@@ -227,7 +263,9 @@ int main(int argc, char *argv[]) {
     exit(0);
 }
 
-void CatchAlarm(int ignored) { }
+void CatchAlarm(int ignored) {
+    printf("CatchAlarm handler\n");
+}
 
 void clientCNTCCode() {
     long avgPing, loss;
@@ -243,4 +281,8 @@ void clientCNTCCode() {
         loss = 0;
 
     printf("\nAvg Ping: %ld microseconds Loss: %ld Percent\n", avgPing, loss);
+}
+
+void addTokens(int signum) {
+    tokenFlag = 1;
 }
