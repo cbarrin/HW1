@@ -143,7 +143,11 @@ if (debugFlag > 0) {
         timestampPtr = (short *) echoBuffer + 3;
         seqNumberPtr = (int *) echoBuffer + 3;
 if (debugFlag > 0) {
-        printf("Seq #%u\n",ntohl(*seqNumberPtr));
+        printf("message size: %d\n",ntohl(*messageSizePtr));
+        printf("session mode: %d\n",ntohl(*sessionModePtr));
+        printf("time stamp: %d\n",ntohl(*timestampPtr));
+        printf("Seq #%d\n",ntohl(*seqNumberPtr));
+        
 }
         double r = rand()%100;
 if (debugFlag > 0) {
@@ -152,8 +156,11 @@ if (debugFlag > 0) {
         printf("Total bytes received by server: %d\n",totalMsg);
         printf("random number generated for loss: %f\n",r);
 }
+        if (ntohs(*sessionModePtr) == 1) {
+            continue;
+        }
         if (r < avgLossRate*100) {
-             continue;
+            continue;
         }
 
         /* Send received datagram back to the client */
