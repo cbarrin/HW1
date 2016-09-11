@@ -29,6 +29,7 @@ struct client {                      /* Struct for storing client information */
     //time_t start_time;
     //time_t last_time;
     unsigned long recv_bytes;
+    int session_end;
 } clients[MAX_CLIENT];
 
 int main(int argc, char *argv[])
@@ -117,11 +118,13 @@ if (debugFlag > 0) {
         for(i=0;i<totalSessions;i++) {
             if(!strcmp(clients[i].ip_addr,inet_ntoa(echoClntAddr.sin_addr))) {
                  if(clients[i].port == ntohs(echoClntAddr.sin_port)) {
-                     current_session = i;
-                     matched = 1;
-                     //clients[current_session].last_time = time(NULL);
-                     clock_gettime(CLOCK_MONOTONIC, &clients[current_session].last_time);
-                     break; 
+                     if(clients[i].session_end != 1) {
+                       current_session = i;
+                       matched = 1;
+                       //clients[current_session].last_time = time(NULL);
+                       clock_gettime(CLOCK_MONOTONIC, &clients[current_session].last_time);
+                       break; 
+                     }
                  }
             }
         }
@@ -135,6 +138,7 @@ if (debugFlag > 0) {
             //clients[current_session].last_time = clients[current_session].start_time; 
             clock_gettime(CLOCK_MONOTONIC, &clients[current_session].last_time);
             clients[current_session].recv_bytes = 0;
+            clients[current_session].session_end = 0;
             //clients[current_session].avg_thrput = 0;
             //clients[current_session].avg_loss = 0;
         }
@@ -149,9 +153,13 @@ if (debugFlag > 0) {
 if (debugFlag > 0) {
         printf("session mode: %d\n",ntohl(*sessionModePtr));
         printf("Seq #%d\n",ntohl(*seqNumberPtr));
-        
 }
-        
+        if (ntohl(*seqNumberPtr) == 0xffffffff) {
+            clients[current_session].session_end = 1;
+if (debugFlag > 0) {
+            printf("SESSION_ENDED\n");
+}
+        } 
         double r = rand()%100;
 if (debugFlag > 0) {
         printf("Saved IP addres: %s\n", clients[current_session].ip_addr);
